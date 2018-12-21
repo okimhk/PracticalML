@@ -1,0 +1,119 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "HK Kim"
+date: "December 21, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har
+
+
+#### Weight Lifting Exercise Dataset
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).
+
+Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes. Participants were supervised by an experienced weight lifter to make sure the execution complied to the manner they were supposed to simulate. The exercises were performed by six male participants aged between 20-28 years, with little weight lifting experience. We made sure that all participants could easily simulate the mistakes in a safe and controlled manner by using a relatively light dumbbell (1.25kg).
+
+
+### Goal
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+
+#### Load the libraries and necessary data
+
+```{r warning = FALSE}
+
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(e1071)
+library(randomForest)
+
+
+pml_training <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+pml_testing <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+
+```
+
+Clean the data by removing columns with all missing data and unnecessary columns in modeling process.
+
+
+```{r, echo=FALSE}
+pml_training <- pml_training[,colSums(is.na(pml_training)) == 0]
+pml_testing <- pml_testing[,colSums(is.na(pml_testing)) == 0]
+
+pml_training <- pml_training[,-c(1:7)]
+pml_testing <- pml_testing[,-c(1:7)]
+```
+
+Partition the train set to allow cross validation. Below printed are a few entries of train set.
+
+```{r, echo=FALSE}
+pml_training_partition <- createDataPartition(y=pml_training$classe, p = 0.75, list = FALSE)
+
+trainSet <- pml_training[pml_training_partition,]
+testSet <- pml_training[-pml_training_partition,]
+
+head(trainSet)
+```
+
+Plot of the data by Classe variable
+
+```{r, echo=FALSE}
+
+plot(trainSet$classe, main="Bar Plot of Classe variable in a Train Set", xlab = "Classe Levels")
+
+```
+
+From the bar plot above we see that level A is the most frequent and level D is the least frequent.
+
+
+#### Prediction Model One: Decision Tree
+
+```{r, echo=FALSE}
+
+model1 <- rpart(classe ~ ., data = trainSet, method = "class")
+
+pred <- predict(model1, testSet, type = "class")
+
+rpart.plot(model1, main = "Classification Tree", extra=102, under=TRUE, faclen=0)
+```
+
+
+
+```{r, echo=FALSE}
+
+confusionMatrix(pred, testSet$classe)
+
+```
+
+#### Prediction Model Two: Random Forest
+
+
+```{r, echo=FALSE}
+model2 <- randomForest(classe ~ ., data = trainSet, method = "class")
+
+pred2 <- predict(model2, testSet, type = "class")
+
+```
+
+
+```{r, echo=FALSE}
+
+confusionMatrix(pred2, testSet$classe)
+
+```
+
+When accuracy ratios are compared, Random Forest model(.9957) performed much better than Decision Tree model(.7416). The expected out-of-sample error, which is calculated as (1 - accuracy ratio), is therefore smaller for Random Forest model. Hence, Random Forest model is chosen and tested on the 20 test data. Below is a table of predictions made with the chosen model.
+
+```{r, echo=FALSE}
+pred3 <- predict(model2, pml_testing, type = "class")
+pred3
+```
+
